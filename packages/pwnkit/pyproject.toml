@@ -3,7 +3,9 @@ name = "pwnkit"
 version = "0.1.0"
 description = "A personal collection of pwn utilities."
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "pyelftools>=0.31",
+]
 
 [project.scripts]
 pwnkit = "pwnkit.cli:main"

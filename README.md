@@ -6,10 +6,10 @@
 
 ```bash
 uv sync
-uv run pwnkit
+uv run pwnkit -v chlibc /path/to/elf
 ```
 
-工具代码位于 `packages/pwnkit/src/pwnkit/`，独立的 Rust/C/C++ 工具放在 `tools/`。
+`chlibc` 会探查 ELF 导入符号；相关文件路径和导入列表仅在 `-v/--verbose` 下输出。工具代码位于 `packages/pwnkit/src/pwnkit/`，独立的 Rust/C/C++ 工具放在 `tools/`。
 
 ## 许可证
 
