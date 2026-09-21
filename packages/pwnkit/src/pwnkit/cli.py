@@ -4,7 +4,7 @@ from pathlib import Path
 
 from elftools.common.exceptions import ELFError
 
-from pwnkit.elf.imports import get_imports
+from pwnkit.elf.needed import get_needed
 
 
 logger = logging.getLogger("pwnkit")
@@ -33,12 +33,12 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "chlibc":
         try:
-            imports = get_imports(args.elf)
+            needed = get_needed(args.elf)
         except (OSError, ELFError) as exc:
             logger.debug("failed to inspect %s: %s", args.elf, exc)
             return 1
         logger.debug("file: %s", args.elf)
-        logger.debug("imports: %s", imports)
+        logger.debug("needed: %s", needed)
     return 0
 
 
