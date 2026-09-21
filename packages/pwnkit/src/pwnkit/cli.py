@@ -1,6 +1,45 @@
-def main() -> None:
-    print("pwnkit")
+import argparse
+import logging
+from pathlib import Path
+
+from elftools.common.exceptions import ELFError
+
+from pwnkit.libc.switcher import switch_elf
+
+
+logger = logging.getLogger("pwnkit")
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="pwnkit")
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="show debug output",
+    )
+    commands = parser.add_subparsers(dest="command", required=True)
+    chlibc = commands.add_parser("chlibc", help="inspect and switch ELF libc dependencies")
+    chlibc.add_argument("elf", type=Path, help="ELF file to inspect")
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.WARNING,
+        format="%(message)s",
+    )
+
+    if args.command == "chlibc":
+        try:
+            return 0 if switch_elf(args.elf) else 1
+        except (OSError, ELFError) as exc:
+            logger.debug("failed to inspect %s: %s", args.elf, exc)
+            print(f"失败：无法检查 {args.elf}")
+            return 1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
