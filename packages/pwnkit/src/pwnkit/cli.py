@@ -4,7 +4,7 @@ from pathlib import Path
 
 from elftools.common.exceptions import ELFError
 
-from pwnkit.elf.needed import get_needed
+from pwnkit.libc.switcher import switch_elf
 
 
 logger = logging.getLogger("pwnkit")
@@ -19,7 +19,7 @@ def _parser() -> argparse.ArgumentParser:
         help="show debug output",
     )
     commands = parser.add_subparsers(dest="command", required=True)
-    chlibc = commands.add_parser("chlibc", help="inspect ELF libc dependencies")
+    chlibc = commands.add_parser("chlibc", help="inspect and switch ELF libc dependencies")
     chlibc.add_argument("elf", type=Path, help="ELF file to inspect")
     return parser
 
@@ -33,12 +33,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "chlibc":
         try:
-            needed = get_needed(args.elf)
+            return 0 if switch_elf(args.elf) else 1
         except (OSError, ELFError) as exc:
             logger.debug("failed to inspect %s: %s", args.elf, exc)
+            print(f"失败：无法检查 {args.elf}")
             return 1
-        logger.debug("file: %s", args.elf)
-        logger.debug("needed: %s", needed)
     return 0
 
 
