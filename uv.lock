@@ -1,0 +1,13 @@
+version = 1
+revision = 3
+requires-python = ">=3.12"
+
+[manifest]
+members = [
+    "pwnkit",
+]
+
+[[package]]
+name = "pwnkit"
+version = "0.1.0"
+source = { editable = "packages/pwnkit" }
