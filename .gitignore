@@ -11,6 +11,9 @@ __pycache__/
 build/
 dist/
 
+# Local machine configuration
+configs/pwnkit.toml
+
 # Local agent instructions
 AGENTS.md
 AGETNS.md

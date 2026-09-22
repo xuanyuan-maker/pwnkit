@@ -1,4 +1,5 @@
 import logging
+import os
 import subprocess
 import tomllib
 from dataclasses import dataclass
@@ -105,6 +106,10 @@ def find_candidates(root: Path, bits: int, minimum: str | None) -> list[GlibcCan
 
 
 def _config_root(config: Path) -> Path:
+    root = os.environ.get("PWNKIT_GLIBC_ROOT")
+    if root:
+        return Path(root).expanduser()
+    config = Path(os.environ.get("PWNKIT_CONFIG", str(config))).expanduser()
     with config.open("rb") as stream:
         return Path(tomllib.load(stream)["glibc"]["root"]).expanduser()
 
@@ -166,7 +171,12 @@ def switch_elf(path: Path, config: Path = Path("configs/pwnkit.toml")) -> bool:
     libc = scan.local.get(LIBC)
     interpreter = scan.local.get(loader)
     if libc is None or interpreter is None:
-        candidates = find_candidates(_config_root(config), bits, scan.metadata.min_glibc)
+        try:
+            glibc_root = _config_root(config)
+        except (KeyError, OSError, tomllib.TOMLDecodeError) as exc:
+            print(f"失败：未配置 glibc 库目录：{exc}")
+            return False
+        candidates = find_candidates(glibc_root, bits, scan.metadata.min_glibc)
         logger.debug("glibc candidates: %s", candidates)
         if not candidates:
             print("失败：没有找到满足架构和 libc 版本要求的候选库")
