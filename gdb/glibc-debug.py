@@ -5,6 +5,9 @@ from pathlib import Path
 import gdb
 
 
+_last_target_dir = None
+
+
 def _split_path(value):
     return [item for item in str(value or "").split(os.pathsep) if item]
 
@@ -25,6 +28,16 @@ def _config_path():
     return None
 
 
+def _target_dir():
+    filename = gdb.current_progspace().filename
+    if not filename:
+        return None
+    path = Path(filename).expanduser()
+    if not path.is_absolute():
+        path = Path.cwd() / path
+    return path.resolve().parent
+
+
 def _load_libs_root():
     for variable in ("PWN_GLIBC_LIBS_DIR", "PWNKIT_GLIBC_ROOT"):
         if value := os.environ.get(variable):
@@ -32,7 +45,6 @@ def _load_libs_root():
 
     config_path = _config_path()
     if config_path is None:
-        gdb.write("[pwnkit] configs/pwnkit.toml was not found\n", gdb.STDERR)
         return None
     try:
         with config_path.open("rb") as stream:
@@ -65,23 +77,43 @@ def _existing_debug_dirs(libs_root):
 
 
 def reload_glibc_debug():
+    global _last_target_dir
     libs_root = _load_libs_root()
-    if libs_root is None or not libs_root.is_dir():
-        if os.environ.get("PWN_GLIBC_DEBUG_VERBOSE") == "1":
-            gdb.write("[pwnkit] glibc root is not configured\n")
-        return
+    debug_dirs = []
+    thread_db_dirs = []
+    solib_dirs = []
+    target_dir = _target_dir()
+    _last_target_dir = target_dir
+    if target_dir:
+        _add_unique(solib_dirs, target_dir)
 
-    debug_dirs, thread_db_dirs = _existing_debug_dirs(libs_root)
+    if libs_root and libs_root.is_dir():
+        debug_dirs, thread_db_dirs = _existing_debug_dirs(libs_root)
+    elif os.environ.get("PWN_GLIBC_DEBUG_VERBOSE") == "1":
+        gdb.write("[pwnkit] glibc root is not configured\n")
+
     for path in _split_path(gdb.parameter("debug-file-directory")):
         _add_unique(debug_dirs, path)
+    for path in _split_path(gdb.parameter("solib-search-path")):
+        _add_unique(solib_dirs, path)
 
     if debug_dirs:
         gdb.execute("set debug-file-directory " + os.pathsep.join(debug_dirs), to_string=True)
     if thread_db_dirs:
         gdb.execute("set libthread-db-search-path " + os.pathsep.join(thread_db_dirs), to_string=True)
+    if solib_dirs:
+        gdb.execute("set solib-search-path " + os.pathsep.join(solib_dirs), to_string=True)
 
     if os.environ.get("PWN_GLIBC_DEBUG_VERBOSE") == "1":
-        gdb.write(f"[pwnkit] loaded glibc debug dirs from {libs_root}\n")
+        gdb.write(f"[pwnkit] target library dir: {target_dir}\n")
+        if libs_root and libs_root.is_dir():
+            gdb.write(f"[pwnkit] loaded glibc debug dirs from {libs_root}\n")
+
+
+def _on_new_objfile(event):
+    target_dir = _target_dir()
+    if target_dir and target_dir != _last_target_dir:
+        reload_glibc_debug()
 
 
 class GlibcDebugReload(gdb.Command):
@@ -94,4 +126,5 @@ class GlibcDebugReload(gdb.Command):
 
 
 GlibcDebugReload()
+gdb.events.new_objfile.connect(_on_new_objfile)
 reload_glibc_debug()
