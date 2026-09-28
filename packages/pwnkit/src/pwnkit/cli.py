@@ -4,6 +4,7 @@ from pathlib import Path
 
 from elftools.common.exceptions import ELFError
 
+from pwnkit.init import init_elf
 from pwnkit.libc.switcher import switch_elf
 
 
@@ -21,6 +22,9 @@ def _parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", required=True)
     chlibc = commands.add_parser("chlibc", help="inspect and switch ELF libc dependencies")
     chlibc.add_argument("elf", type=Path, help="ELF file to inspect")
+    init = commands.add_parser("init", help="initialize an ELF challenge directory")
+    init.add_argument("elf", type=Path, help="ELF file to initialize")
+    init.add_argument("template", nargs="?", choices=["heap"], default=None)
     return parser
 
 
@@ -38,6 +42,8 @@ def main(argv: list[str] | None = None) -> int:
             logger.debug("failed to inspect %s: %s", args.elf, exc)
             print(f"失败：无法检查 {args.elf}")
             return 1
+    if args.command == "init":
+        return 0 if init_elf(args.elf, args.template or "") else 1
     return 0
 
 
