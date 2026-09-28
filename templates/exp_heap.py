@@ -9,7 +9,7 @@ sys.path.insert(0, '[PWNKIT_PATH]')
 from pwnkit import HeapMenu
 
 context(arch='[ARCH]', os='linux')
-context.terminal = ['konsole', '-e']
+context.terminal = ['kitty']
 context.log_level = 'debug'
 context.binary = '[ELF_PATH]'
 e = ELF('[ELF_PATH]')
@@ -18,7 +18,7 @@ libc = e.libc
 host = "127.0.0.1"
 port = 9999
 if args['RE']:
-    io = remote(host, port)
+    io = remote(host, port, ssl=bool(args['SSL']), sni=host)
 else:
     io = process('[ELF_PATH]')
 
